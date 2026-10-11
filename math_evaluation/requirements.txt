@@ -1,0 +1,18 @@
+# Math evaluator adapted from ZubinGou/math-evaluation-harness (MIT).
+# The vendored latex2sympy2 parser is installed separately from ./latex2sympy.
+# Use a CUDA- and torch-compatible vLLM wheel in the target environment.
+pebble==5.2.0
+regex>=2024.11.6
+word2number==1.1
+timeout-decorator==0.5.0
+python-dateutil>=2.8.2
+multiprocess>=0.70.15
+sympy==1.13.1
+antlr4-python3-runtime==4.11.1
+mpmath>=1.3.0
+tqdm>=4.66.0
+numpy>=1.26.0
+pandas>=2.2.0
+datasets>=3.0.0
+transformers>=4.52.0,<4.57
+vllm==0.8.5

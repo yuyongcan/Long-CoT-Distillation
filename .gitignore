@@ -1,0 +1,15 @@
+# Full research data is distributed separately; keep the DFT-style directories.
+/verl/data/
+/math_evaluation/data/
+/verl/checkpoints/
+/verl/tensorboard_log/
+/math_evaluation/outputs/
+/verl/wandb/
+*.log
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+.env

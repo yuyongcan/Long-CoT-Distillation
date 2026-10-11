@@ -1,0 +1,87 @@
+data:
+  train_batch_size: 256
+  micro_batch_size: null # will be deprecated, use micro_batch_size_per_gpu
+  micro_batch_size_per_gpu: 4  # this is also val batch size
+  train_files: ~/data/gsm8k/train.parquet
+  val_files: ~/data/gsm8k/test.parquet
+  # Single-turn settings
+  prompt_key: question
+  response_key: answer
+  prompt_dict_keys: null
+  response_dict_keys: null
+  # Multi-turn settings
+  multiturn:
+    enable: false  # Set to true to use multi-turn dataset
+    messages_key: messages  # Key for messages list in multi-turn mode
+    tools_key: tools  # Key for tools list in multi-turn mode
+    enable_thinking_key: enable_thinking  # Whether to enable thinking in multi-turn mode
+  max_length: 1024
+  truncation: right
+  balance_dp_token: False
+  chat_template: null
+  custom_cls:
+    path: null
+    name: null
+  use_shm: False
+  # Negative sample weighting (used by fsdp_sft_neg_trainer)
+  neg_weight_sft: false        # Set to true to enable NegWeightSFTDataset
+  label_key: label             # Column name storing correct/incorrect label
+  label_dict_keys: []          # If label is nested in a dict, list the keys to traverse
+  positive_label: correct      # String value that identifies a positive (correct) sample
+  neg_weight: 0.2              # |weight| applied to negative samples (actual sign is negative)
+  # Direct weight optimisation (used by fsdp_sft_weight_trainer)
+  weighted_sft: false          # Set to true to enable WeightedSFTDataset
+  weight_key: weight           # Column name storing the per-sample scalar weight (can be negative)
+  weight_dict_keys: []         # If weight is nested in a dict, list the keys to traverse
+  neg_tail_ratio: 1.0          # Fraction of response tokens to penalise for negative samples (from the end).
+                               # 1.0 = penalise full response (default); 0.2 = only penalise last 20%.
+model:
+  partial_pretrain: ~/models/gemma-1.1-7b-it
+  use_shm: False
+  fsdp_config:
+    model_dtype: fp32
+    wrap_policy:
+      min_num_params: 0
+    cpu_offload: False
+    offload_params: False
+  external_lib: null
+  enable_gradient_checkpointing: True
+  trust_remote_code: False
+  lora_rank: 0  # Set to positive value to enable LoRA (e.g., 32)
+  lora_alpha: 16  # LoRA scaling factor
+  target_modules: all-linear  # Target modules for LoRA adaptation
+  use_liger: False
+  strategy: fsdp2
+  # KL-divergence regularisation against the pretrained reference model.
+  # Set kl_coef > 0 to enable; the reference model will be loaded in fp16/bf16
+  # and kept frozen throughout training.
+  # total_loss = main_loss + kl_coef * KL(π_θ || π_ref)
+  kl_coef: 0.0   # e.g. 0.1 to enable KL regularisation
+optim:
+  lr: 1e-5
+  betas: [0.9, 0.95]
+  weight_decay: 0.01
+  warmup_steps_ratio: 0.1
+  clip_grad: 1.0
+  lr_scheduler: cosine
+ulysses_sequence_parallel_size: 1
+use_remove_padding: False
+trainer:
+  default_local_dir: checkpoints/${trainer.project_name}/${trainer.experiment_name}
+  default_hdfs_dir: null
+  resume_path: null
+  project_name: gsm8k-sft
+  experiment_name: test
+  total_epochs: 4
+  total_training_steps: null
+  logger: [ 'console', 'wandb' ]
+  seed: 1
+  save_freq: -1
+  test_freq: -1
+  nnodes: 1
+  n_gpus_per_node: 8
+  max_ckpt_to_keep: null # TODO
+  # Hybrid SFT-DFT scheduling (used by fsdp_dft_hybrid_trainer)
+  hybrid_mode: step        # "step" | "token"
+  hybrid_lambda_k: 10.0      # sigmoid steepness
+  hybrid_lambda_c: 0.3       # sigmoid centre (relative progress τ where λ=0.5)

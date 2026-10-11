@@ -1,0 +1,142 @@
+# Representative comparisons; paths and counts are recorded in data_manifest.json.
+# `medium`/`random_3k` reuse correctness_positive, not copied twice.
+version: 1
+project: long-cot-distillation
+train:
+  gpus: 8
+  global_batch_size: 128
+  learning_rate: 1.0e-5
+  epochs: 3
+  dtype: bf16
+  seed: 1
+  optimizer_betas: [0.9, 0.95]
+  weight_decay: 0.01
+  lr_scheduler: cosine
+  warmup_steps_ratio: 0.1
+  gradient_clip: 1.0
+  use_remove_padding: true
+  use_liger: true
+  ulysses_sequence_parallel_size: 1
+  fsdp_strategy: fsdp2
+  save_frequency: -1
+  # These match the source launchers. Right-truncation may cut exceptionally long traces.
+  truncation: right
+  training_files_are_read_only: true
+models:
+  qwen3_1_7b: Qwen/Qwen3-1.7B-Base
+  qwen3_4b: Qwen/Qwen3-4B-Base
+  qwen3_8b: Qwen/Qwen3-8B-Base
+experiments:
+  fig1_correct_ce:
+    paper: Figure 1
+    model: qwen3_1_7b
+    dataset: correctness_positive
+    loss: logp
+    max_length: 4800
+    micro_batch_per_gpu: 4
+  fig1_incorrect_ce:
+    paper: Figure 1
+    model: qwen3_1_7b
+    dataset: correctness_negative
+    loss: logp
+    max_length: 4800
+    micro_batch_per_gpu: 4
+  fig1_correct_p:
+    paper: Figure 1
+    model: qwen3_1_7b
+    dataset: correctness_positive
+    loss: p
+    max_length: 4800
+    micro_batch_per_gpu: 4
+  fig1_incorrect_p:
+    paper: Figure 1
+    model: qwen3_1_7b
+    dataset: correctness_negative
+    loss: p
+    max_length: 4800
+    micro_batch_per_gpu: 4
+  fig3_diversity_500:
+    paper: Figure 3
+    model: qwen3_1_7b
+    dataset: diversity_500
+    loss: logp
+    max_length: 4800
+    micro_batch_per_gpu: 4
+  fig3_diversity_16k:
+    paper: Figure 3
+    model: qwen3_1_7b
+    dataset: diversity_16k
+    loss: logp
+    max_length: 4800
+    micro_batch_per_gpu: 4
+  fig4_easy_444:
+    paper: Figure 4
+    model: qwen3_8b
+    dataset: easy_444
+    loss: logp
+    max_length: 4800
+    micro_batch_per_gpu: 2
+  fig4_random_3k:
+    paper: Figure 4
+    model: qwen3_8b
+    dataset: correctness_positive
+    loss: logp
+    max_length: 4800
+    micro_batch_per_gpu: 2
+  fig5_simple_ce:
+    paper: Figure 5
+    model: qwen3_4b
+    dataset: complexity_simple
+    loss: logp
+    max_length: 2800
+    micro_batch_per_gpu: 4
+    epochs: 1 # Matches local NuminaMath launcher; override to 3 if targeting paper's default.
+  fig5_simple_p:
+    paper: Figure 5
+    model: qwen3_4b
+    dataset: complexity_simple
+    loss: p
+    max_length: 2800
+    micro_batch_per_gpu: 4
+    epochs: 1
+  fig5_medium_ce:
+    paper: Figure 5
+    model: qwen3_4b
+    dataset: correctness_positive
+    loss: logp
+    max_length: 4800
+    micro_batch_per_gpu: 4
+  fig5_medium_p:
+    paper: Figure 5
+    model: qwen3_4b
+    dataset: correctness_positive
+    loss: p
+    max_length: 4800
+    micro_batch_per_gpu: 4
+  fig5_complex_ce:
+    paper: Figure 5
+    model: qwen3_4b
+    dataset: complexity_complex
+    loss: logp
+    max_length: 32768
+    micro_batch_per_gpu: 1
+    cpu_offload: true # Source script's long-CoT setting; sufficient host RAM required.
+  fig5_complex_p:
+    paper: Figure 5
+    model: qwen3_4b
+    dataset: complexity_complex
+    loss: p
+    max_length: 32768
+    micro_batch_per_gpu: 1
+    cpu_offload: true
+evaluation:
+  benchmarks: [aime24, amc23, minerva_math, olympiadbench, math]
+  math_subset_size: 2000
+  n_sampling: 16
+  temperature: 1.0
+  top_p: 1.0
+  max_new_tokens: 4096
+  max_new_tokens_complex: 32768
+  prompt_type: qwen-boxed
+  seed: 0
+  metric: avg@16
