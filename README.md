@@ -1,110 +1,178 @@
-# Long-CoT Distillation
+<h1 align="center">Long-CoT Distillation</h1>
 
-Code and representative experiments for **“Facts Don’t Speak Louder than Words: The Behavioral Essence of Long-CoT Distillation.”** This repository retains the original `DFT` layout (`verl/` for training and `math_evaluation/` for evaluation), with a smaller set of paper experiments and standardized paths. It excludes the original 2.7 TB of checkpoints. The original `DFT` directory was not modified.
+<p align="center">
+  <b>Facts Don’t Speak Louder than Words: The Behavioral Essence of Long-CoT Distillation</b>
+</p>
 
-## Paper overview
+<p align="center"><i>NeurIPS 2026 · Code and representative experiments</i></p>
 
-Long chain-of-thought (Long-CoT) distillation is often built around correct reasoning traces from a diverse set of problems. This paper asks whether correctness and broad prompt coverage are what actually drive the resulting gains. We propose the **Behavioral Hypothesis**: distillation primarily helps a model organize its existing knowledge into reusable, structured reasoning behaviors, rather than simply memorizing problem-specific facts.
+<p align="center">
+  <a href="#overview">Overview</a> ·
+  <a href="#key-findings">Key Findings</a> ·
+  <a href="#repository-contents">Repository Contents</a> ·
+  <a href="#getting-started">Getting Started</a> ·
+  <a href="#datasets">Datasets</a> ·
+  <a href="#citation">Citation</a>
+</p>
 
-### Incorrect answers can still teach reasoning behavior (Figure 1)
+<p align="center">
+  <img src="https://img.shields.io/badge/NeurIPS-2026-blue" alt="NeurIPS 2026">
+  <img src="https://img.shields.io/badge/Math%20Benchmarks-5-orange" alt="Five math benchmarks">
+  <img src="https://img.shields.io/badge/Code%20License-Apache--2.0-green" alt="Code license: Apache 2.0">
+</p>
 
-Fine-tuning on trajectories with **incorrect final answers** achieves **97.7% of the accuracy** of training on correct trajectories, retaining **94.7% of the improvement over the base models** when aggregated across the paper's mathematical comparisons (Section 3.1). Incorrect trajectories can also help when correct data is scarce: with 512 correct samples, increasing the positive-to-negative ratio from 1:0 to 1:5 raises mean accuracy across five math benchmarks from **20.4% to 26.4%** (Figure 2). These are not claims that arbitrarily corrupted reasoning is useful: the paper's incorrect set consists of teacher-generated trajectories selected by **final-answer correctness**, some of which retain useful reasoning structure.
+---
 
-![Figure 1 from the paper: accuracy after distillation on correct and incorrect trajectories across models, losses and math benchmarks.](assets/figure1-correctness.png)
+## Overview
 
-### Prompt coverage is not the main bottleneck here (Figure 3)
+Long chain-of-thought (Long-CoT) distillation is usually trained on *correct* reasoning traces collected from *diverse* problems. What actually drives the gains? Our experiments suggest that models primarily acquire **reusable reasoning behaviors**—organizing existing knowledge into structured, step-by-step solutions—rather than simply memorizing problem-specific facts. We call this the **Behavioral Hypothesis**.
 
-Under a fixed candidate-trajectory budget, sampling from **500 prompts (128 responses each)** gives performance close to **16,000 prompts (4 responses each)**. For example, Qwen3-1.7B-Base reaches **28.0% vs. 26.8%** mean accuracy across five math benchmarks at the two endpoints (paper Table 9). These are candidate-generation settings; after correctness filtering, the corresponding released training files contain **450 vs. 10,729** distinct prompts.
+This repository provides training code, selected experiment configurations, a mathematical evaluation harness, and the evaluation questions. The large training trajectories are **not included in GitHub**; see [Datasets](#datasets) for the release boundary. The figures and results below come from the paper, not new runs of this repository.
 
-![Figure 3 from the paper: math accuracy under different numbers of unique prompts and samples per prompt.](assets/figure3-prompt-diversity.png)
+---
 
-### Gains on problems the model already solves (Figure 4)
+## Key Findings
 
-Fine-tuning on high-confidence, already-solvable problems (answered correctly in at least **7 of 8** base-model samples) still substantially improves performance and approaches training on randomly selected problems. The paper evaluates **Easy-444** for Qwen3-8B-Base and **Easy-643** for Qwen3-14B-Base; this repository includes the Easy-444 comparison. This is evidence **consistent with** behavioral alignment, not a parameter-level causal separation of behavior from knowledge.
+### 1. Incorrect answers can still teach reasoning behavior
 
-![Figure 4 from the paper: performance after fine-tuning on already-solvable versus randomly selected problems.](assets/figure4-solvable-problems.png)
+Across the paper's mathematical comparisons, training on teacher trajectories with **incorrect final answers** retains **97.7% of the accuracy** and **94.7% of the improvement over base models** achieved with correct trajectories (Figure 1). When correct examples are scarce, incorrect trajectories can help: starting with 512 correct examples, adding incorrect examples at a 1:5 positive-to-negative ratio increases average accuracy from **20.4% to 26.4%** (Figure 2).
 
-### The preferred SFT loss depends on CoT complexity (Figure 5)
+<p align="center">
+  <img src="assets/figure1-correctness.png" width="95%" alt="Figure 1: correct versus incorrect reasoning trajectories across models and losses">
+</p>
 
-For Qwen3-4B-Base, the paper reports the following `avg@16` accuracy averaged over five math benchmarks (Table 8). Mean token lengths describe the *training trajectories* (Section 5.1):
+> **Figure 1.** Final-answer errors do not necessarily erase useful reasoning structure. The negative set contains teacher-generated trajectories selected by final-answer correctness; this does **not** mean arbitrary, logically broken traces are helpful.
 
-| CoT complexity | Mean training length | `-log p` | `-p` |
-| --- | ---: | ---: | ---: |
+### 2. Broad prompt coverage is not the bottleneck under a fixed trajectory budget
+
+Sampling 128 candidate responses from each of **500 prompts** performs comparably to sampling 4 from each of **16,000 prompts** (Figure 3). For Qwen3-1.7B-Base, the average across five math benchmarks is **28.0% vs. 26.8%** at these endpoints (paper Table 9). After correctness filtering, the released training files contain **450 vs. 10,729 distinct prompts**, respectively.
+
+<p align="center">
+  <img src="assets/figure3-prompt-diversity.png" width="95%" alt="Figure 3: prompt diversity versus samples per prompt at a fixed trajectory budget">
+</p>
+
+> **Figure 3.** Increasing the number of unique training prompts has little effect in this controlled setting.
+
+### 3. Already-solvable problems still improve reasoning
+
+Fine-tuning on problems the base model solved in at least **7 of 8** attempts yields substantial improvements comparable to training on randomly selected problems (Figure 4). The paper studies **Easy-444** with Qwen3-8B-Base and **Easy-643** with Qwen3-14B-Base; this repository includes the Easy-444 comparison. The finding supports the Behavioral Hypothesis but does not prove a parameter-level separation of behavior and knowledge.
+
+<p align="center">
+  <img src="assets/figure4-solvable-problems.png" width="95%" alt="Figure 4: fine-tuning on already-solvable versus randomly selected problems">
+</p>
+
+> **Figure 4.** Improving on already-solvable questions is consistent with learning *how to reason* using existing knowledge.
+
+### 4. Match the SFT loss to CoT complexity
+
+The preferred objective changes with reasoning depth (Figure 5). For **Qwen3-4B-Base**, paper Table 8 reports the following `avg@16` accuracies, averaged equally across five math benchmarks:
+
+| Training CoT | Mean trajectory length | `-log p` | `-p` |
+|:---|---:|---:|---:|
 | Simple | 426 tokens | 22.8% | **37.4%** |
 | Medium | 1,337 tokens | 42.8% | **44.1%** |
 | Complex | 9,062 tokens | **45.6%** | 40.5% |
 
-The paper relates this contrast to token-gradient weighting: `-log p` gives relatively more weight to low-probability tokens than `-p`, potentially helping with difficult transitions in long reasoning chains. This explanation is an interpretation of the observed results, not a universal guarantee for either loss.
+<p align="center">
+  <img src="assets/figure5-loss-complexity.png" width="95%" alt="Figure 5: cross-entropy and probability-based SFT losses across CoT complexity levels">
+</p>
 
-![Figure 5 from the paper: accuracy for probability-based and cross-entropy losses across Simple, Medium and Complex CoTs.](assets/figure5-loss-complexity.png)
+> **Figure 5.** Probability-based `-p` excels on simpler traces, while cross-entropy `-log p` scales better to complex, long reasoning. The paper discusses different weights on low-probability tokens as a possible explanation, not a universal rule.
 
-These figures and numbers are from the **paper**, not measurements freshly reproduced by this repository. The released configurations cover representative comparisons only (e.g., the two Figure 3 endpoints, Easy-444 and Qwen3-4B-Base for Figure 5); the Figure 2 mixture study and some models and non-math evaluations are not included. The MATH-2000 subset bundled here is a new draw, so its evaluation results are not expected to exactly match the paper. See [Reproduce](#reproduce) for details.
+These are **paper results**, not measurements re-run here. The provided experiments cover representative conditions only: Figure 3's two endpoints, Figure 4's Easy-444 comparison, and Qwen3-4B-Base for Figure 5. Figure 2's mixture study, some models, and non-math evaluations are not included.
 
-## What's included
+---
 
-- `verl/verl/`: SFT trainers copied from `DFT/verl`, including `-log(p)` and `-p` (detached-probability-weighted NLL).
-- `verl/train_configs/experiments.yaml` and `verl/train_configs/train.py`: selected experiments (Fig. 1: correct/incorrect; Fig. 3: 500 vs. 16k prompts; Fig. 4: 444 already-solvable vs. random problems; Fig. 5: simple/medium/complex CoTs with both losses).
-- `verl/data/`: seven complete, representative training Parquet files in named experiment subdirectories.
-- `math_evaluation/`: math evaluator copied from `DFT/math_evaluation`, with `data/` holding five benchmark test sets and four generation-prompt subsets; `sh/run_eval.py` launches evaluation.
-- `verl/train_configs/data_manifest.json`: each copied data file's relative path, source, row count and SHA-256. Training and evaluation data directories are ignored by Git and can be distributed in a separate Hugging Face Dataset.
+## Repository Contents
 
-The **same positive 22,222-trajectory file** is reused for the random-problem and medium-CoT baselines; it is not duplicated. The negative set contains 25,778 trajectories. After filtering correct responses, the 500/16k-prompt datasets contain 450/10,729 distinct prompts with 29,447/29,494 trajectories. The easy set contains 444 prompts and 26,445 trajectories.
+| Path | Contents |
+|:---|:---|
+| [`verl/verl/`](verl/verl/) | Full-parameter SFT trainers for `-log p` and `-p`. |
+| [`verl/train_configs/`](verl/train_configs/) | 14 representative experiment settings, training launcher, and data checksum manifest. |
+| [`math_evaluation/`](math_evaluation/) | Math evaluator and the [`sh/run_eval.py`](math_evaluation/sh/run_eval.py) launcher. |
+| [`math_evaluation/data/`](math_evaluation/data/) | **Tracked in GitHub:** five math benchmark test sets and four prompt subsets (9 JSONL files). |
+| `verl/data/` | **Not tracked in GitHub:** seven training Parquet files (approximately 595 MiB locally). |
+| [`assets/`](assets/) | Figures extracted from the paper. |
 
-## Reproduce
+No model weights or trained checkpoints are distributed here.
 
-Use Python 3.10 with PyTorch 2.6.0+cu124 (the existing local environments were checked for imports and data loading, **not** used to run full training). The paper used 8 A100-80G GPUs; the 32k-token experiments require substantial CPU memory. Install CUDA-compatible PyTorch, FlashAttention and Liger and the dependencies in `verl/requirements.txt`. Evaluation can use a separate Python 3.10 environment with `math_evaluation/requirements.txt` and `pip install --no-build-isolation -e math_evaluation/latex2sympy`. On this offline machine, use an existing prepared environment and local model checkpoints.
+---
 
-From the **new repository root**, run the following commands; replace model paths with existing local Hugging Face **Base** model directories. Each training command calls the same `torchrun -m verl.trainer.fsdp_sft_trainer` (`-log p`) or `fsdp_dft_trainer` (`-p`) pattern as the source scripts, using the matching file under `verl/data/`:
+## Getting Started
+
+### Evaluate a local model
+
+The five math test sets are included in a normal GitHub clone; **training data is not required to run evaluation**. Use a compatible Python 3.10 environment with an NVIDIA GPU, vLLM, and a local Hugging Face-format model:
+
+```bash
+git clone https://github.com/yuyongcan/Long-CoT-Distillation.git
+cd Long-CoT-Distillation
+python -m pip install -r math_evaluation/requirements.txt
+python -m pip install --no-build-isolation -e math_evaluation/latex2sympy
+python math_evaluation/sh/run_eval.py --model-path /path/to/local/HF-model --dry-run
+python math_evaluation/sh/run_eval.py --model-path /path/to/local/HF-model
+```
+
+Evaluation uses AIME 2024, AMC23, Minerva Math, OlympiadBench, and MATH-2000, with 16 samples per problem at temperature 1.0. The reported `avg@16` is the mean of sample accuracies, then averaged equally over the five benchmarks. Results are saved under the Git-ignored `math_evaluation/outputs/`. When evaluating a checkpoint created by the launcher below, use `--experiment fig1_correct_ce` instead of `--model-path`.
+
+### Train a representative experiment
+
+**Training requires the seven Parquet files** at the `verl/data/` paths specified by [`data_manifest.json`](verl/train_configs/data_manifest.json); they are not included in a GitHub clone. Use Python 3.10, a CUDA-compatible PyTorch installation, and the dependencies in `verl/requirements.txt`. The paper used 8 NVIDIA A100-80G GPUs; 32k-token runs require substantial host memory.
+
+After placing **all seven** training files under `verl/data/`, verify the 16 training and evaluation files, inspect the configurations, and launch an experiment:
 
 ```bash
 python verl/train_configs/verify_data.py
 python verl/train_configs/train.py --list
-python verl/train_configs/train.py --experiment fig1_correct_ce   --model-path /path/to/Qwen3-1.7B-Base --dry-run
-python verl/train_configs/train.py --experiment fig1_correct_ce   --model-path /path/to/Qwen3-1.7B-Base
-python verl/train_configs/train.py --experiment fig1_incorrect_ce --model-path /path/to/Qwen3-1.7B-Base
-python verl/train_configs/train.py --experiment fig1_correct_p    --model-path /path/to/Qwen3-1.7B-Base
-python verl/train_configs/train.py --experiment fig1_incorrect_p  --model-path /path/to/Qwen3-1.7B-Base
+python verl/train_configs/train.py --experiment fig1_correct_ce --model-path /path/to/Qwen3-1.7B-Base --dry-run
+python verl/train_configs/train.py --experiment fig1_correct_ce --model-path /path/to/Qwen3-1.7B-Base
 python math_evaluation/sh/run_eval.py --experiment fig1_correct_ce
 ```
 
-For the other comparisons, select the named configuration and its matching Base model:
+| Paper comparison | Experiment names | Base model |
+|:---|:---|:---|
+| Figure 1 · correct vs. incorrect, both losses | `fig1_correct_ce`, `fig1_incorrect_ce`, `fig1_correct_p`, `fig1_incorrect_p` | Qwen3-1.7B-Base |
+| Figure 3 · 500 vs. 16k source prompts | `fig3_diversity_500`, `fig3_diversity_16k` | Qwen3-1.7B-Base |
+| Figure 4 · already solvable vs. random | `fig4_easy_444`, `fig4_random_3k` | Qwen3-8B-Base |
+| Figure 5 · simple, medium, complex × both losses | `fig5_simple_ce`, `fig5_simple_p`, `fig5_medium_ce`, `fig5_medium_p`, `fig5_complex_ce`, `fig5_complex_p` | Qwen3-4B-Base |
 
-```bash
-python verl/train_configs/train.py --experiment fig3_diversity_500 --model-path /path/to/Qwen3-1.7B-Base
-python verl/train_configs/train.py --experiment fig3_diversity_16k --model-path /path/to/Qwen3-1.7B-Base
-python verl/train_configs/train.py --experiment fig4_easy_444     --model-path /path/to/Qwen3-8B-Base
-python verl/train_configs/train.py --experiment fig4_random_3k    --model-path /path/to/Qwen3-8B-Base
-python verl/train_configs/train.py --experiment fig5_simple_ce    --model-path /path/to/Qwen3-4B-Base
-python verl/train_configs/train.py --experiment fig5_simple_p     --model-path /path/to/Qwen3-4B-Base
-python verl/train_configs/train.py --experiment fig5_medium_ce    --model-path /path/to/Qwen3-4B-Base
-python verl/train_configs/train.py --experiment fig5_medium_p     --model-path /path/to/Qwen3-4B-Base
-python verl/train_configs/train.py --experiment fig5_complex_ce   --model-path /path/to/Qwen3-4B-Base
-python verl/train_configs/train.py --experiment fig5_complex_p    --model-path /path/to/Qwen3-4B-Base
-python math_evaluation/sh/run_eval.py --experiment fig5_complex_p
+The launcher writes checkpoints under the Git-ignored `verl/checkpoints/` and refuses to overwrite an existing run. The `-p` trainer uses probability-weighted NLL to implement the `-p` gradient.
+
+**Reproduction notes:** The bundled MATH-2000 set is a new seed-42 draw, not the exact 2,000 IDs evaluated in the paper; numerical results may differ. The Simple-CoT config uses 1 epoch to reflect its original run setting, whereas the paper states 3 epochs as the general default.
+
+---
+
+## Datasets
+
+### Mathematical evaluation data (included)
+
+| Test set | Questions | File |
+|:---|---:|:---|
+| AIME 2024 | 30 | [`aime24/test.jsonl`](math_evaluation/data/aime24/test.jsonl) |
+| AMC23 | 40 | [`amc23/test.jsonl`](math_evaluation/data/amc23/test.jsonl) |
+| Minerva Math | 272 | [`minerva_math/test.jsonl`](math_evaluation/data/minerva_math/test.jsonl) |
+| OlympiadBench | 675 | [`olympiadbench/test.jsonl`](math_evaluation/data/olympiadbench/test.jsonl) |
+| MATH (seed-42 subset) | 2,000 | [`math/test.jsonl`](math_evaluation/data/math/test.jsonl) |
+
+Four additional prompt sets are included under [`math_evaluation/data/`](math_evaluation/data/): random-3k (2,995), diversity-500 (500), diversity-16k (16,000), and Easy-444 (444). These prompt sets support data generation and analysis; the evaluator runs the **five test sets** above by default.
+
+### Training trajectories (separate release)
+
+The seven training Parquet files are **excluded from GitHub**. Their relative paths, row counts, and SHA-256 checksums are in [`verl/train_configs/data_manifest.json`](verl/train_configs/data_manifest.json); place them under `verl/data/` before training or running the full data verifier. The 22,222 correct trajectories are reused for the random-problem and medium-CoT baselines rather than duplicated. The incorrect set has 25,778 trajectories; the Easy-444 set contains 26,445 trajectories. A link to the separate training-data release can be added when it is available.
+
+---
+
+## License and Acknowledgments
+
+The repository's code is distributed under [Apache License 2.0](LICENSE). The included `verl` components retain their [license](verl/LICENSE) and [notice](verl/Notice.txt); the math evaluator and bundled `latex2sympy` parser retain their respective [MIT licenses](math_evaluation/LICENSE) and [license notices](math_evaluation/latex2sympy/LICENSE.txt). The evaluation questions and training data originate from the cited datasets and benchmarks in the paper; the code license does not supersede any upstream data terms.
+
+## Citation
+
+```bibtex
+@inproceedings{yu2026facts,
+  title     = {Facts Don't Speak Louder than Words: The Behavioral Essence of Long-CoT Distillation},
+  author    = {Yongcan Yu and Jian Liang and Lingxiao He and Kuangpu Guo and Yanbo Wang and Shuo Lu and Meng Wang and Ran He},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026}
+}
 ```
-
-If you prefer the original launcher style, the first command above expands to the following core `verl/` command (the Python launcher supplies the remaining options from `experiments.yaml`):
-
-```bash
-cd verl
-torchrun --standalone --nnodes=1 --nproc_per_node=8 -m verl.trainer.fsdp_sft_trainer \
-  data.train_files=data/dapo17k_qwen3_4b_4k/train_pos.parquet data.val_files=null \
-  data.prompt_key=extra_info data.response_key=extra_info \
-  'data.prompt_dict_keys=[question]' 'data.response_dict_keys=[answer]' \
-  data.train_batch_size=128 data.micro_batch_size_per_gpu=4 data.max_length=4800 \
-  optim.lr=1e-5 model.partial_pretrain=/path/to/Qwen3-1.7B-Base \
-  model.fsdp_config.model_dtype=bf16 model.use_liger=true \
-  trainer.default_local_dir=checkpoints/fig1_correct_ce \
-  trainer.logger='[console,tensorboard]' trainer.total_epochs=3 \
-  trainer.test_freq=-1 trainer.save_freq=-1 use_remove_padding=true
-```
-
-For `-p`, switch to `-m verl.trainer.fsdp_dft_trainer`; for the incorrect set, switch to `data/dapo17k_qwen3_4b_4k/train_neg.parquet`. Prefer `train_configs/train.py` when using the complete parameterized settings. Checkpoints and TensorBoard logs go under ignored `verl/checkpoints/` and `verl/tensorboard_log/`; evaluation results go under ignored `math_evaluation/outputs/`. The Python launchers refuse to overwrite existing output directories. You may set `--gpus` for training and `--tensor-parallel-size` for evaluation; hardware changes may affect results.
-
-The math evaluation runs AIME 2024, AMC23, Minerva Math, OlympiadBench and a fixed 2,000-question MATH subset at temperature 1.0 with 16 samples; `summary.json` reports `avg@16` averaged equally over the five benchmarks. **This MATH subset is a new seed-42 draw** because the original paper's 2,000 sampled IDs were not preserved here; it is not claimed to reproduce the paper's exact reported MATH number. The copied historical launcher evaluated 1,000 MATH questions, so it is intentionally not used as-is. The source NuminaMath launcher ran 1 epoch (as reflected in the simple-CoT config), whereas the paper states 3 epochs as its default: this discrepancy is disclosed rather than silently changed.
-
-## Data release and attribution
-
-The two ignored folders `verl/data/` and `math_evaluation/data/` (~0.6 GB combined) are intended to be uploaded **separately** to a Hugging Face Dataset, preserving these paths. After downloading them into the new repository, run `python verl/train_configs/verify_data.py`; the checksum manifest is kept with the training configs. To recreate the same files from an adjacent copy of the original repository, run `python verl/train_configs/prepare_data.py --source-root ../DFT` (or `--resume` to verify an existing copy). This requires no network. **No upload, download, or full training was performed here.**
-
-The `verl/` copy retains the upstream Apache-2.0 `LICENSE` and `Notice.txt`; `math_evaluation/` and its `latex2sympy/` copy retain their MIT licenses. The NuminaMath data card lists Apache-2.0; the owner confirmed redistribution of the relevant problems and benchmarks. The `-p` objective is changed **only inside the new `verl/` copy**, and its gradient was checked against direct `-p`. Please review the files and licenses before publishing. These are selected experiments, not every model or domain in the paper.

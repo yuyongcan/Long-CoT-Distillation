@@ -1,6 +1,5 @@
-# Full research data is distributed separately; keep the DFT-style directories.
+# Training trajectories are distributed separately; evaluation data is tracked in Git.
 /verl/data/
-/math_evaluation/data/
 /verl/checkpoints/
 /verl/tensorboard_log/
 /math_evaluation/outputs/
