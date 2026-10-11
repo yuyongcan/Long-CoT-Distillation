@@ -1,13 +1,10 @@
-<h1 align="center">Long-CoT Distillation</h1>
-
-<p align="center">
-  <b>Facts Don’t Speak Louder than Words: The Behavioral Essence of Long-CoT Distillation</b>
-</p>
+<h1 align="center">Facts Don’t Speak Louder than Words:<br>The Behavioral Essence of Long-CoT Distillation</h1>
 
 <p align="center"><i>NeurIPS 2026 · Code and representative experiments</i></p>
 
 <p align="center">
   <a href="#overview">Overview</a> ·
+  <a href="#data-preparation">Data Preparation</a> ·
   <a href="#key-findings">Key Findings</a> ·
   <a href="#repository-contents">Repository Contents</a> ·
   <a href="#getting-started">Getting Started</a> ·
@@ -17,7 +14,6 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/NeurIPS-2026-blue" alt="NeurIPS 2026">
-  <img src="https://img.shields.io/badge/Math%20Benchmarks-5-orange" alt="Five math benchmarks">
   <img src="https://img.shields.io/badge/Code%20License-Apache--2.0-green" alt="Code license: Apache 2.0">
 </p>
 
@@ -27,7 +23,25 @@
 
 Long chain-of-thought (Long-CoT) distillation is usually trained on *correct* reasoning traces collected from *diverse* problems. What actually drives the gains? Our experiments suggest that models primarily acquire **reusable reasoning behaviors**—organizing existing knowledge into structured, step-by-step solutions—rather than simply memorizing problem-specific facts. We call this the **Behavioral Hypothesis**.
 
-This repository provides training code, selected experiment configurations, a mathematical evaluation harness, and the evaluation questions. The large training trajectories are **not included in GitHub**; see [Datasets](#datasets) for the release boundary. The figures and results below come from the paper, not new runs of this repository.
+This repository provides training code, selected experiment configurations, a mathematical evaluation harness, and the evaluation questions. The large training trajectories are **not included in GitHub**; see [Data Preparation](#data-preparation) for how to download them. The figures and results below come from the paper, not new runs of this repository.
+
+---
+
+## Data Preparation
+
+A GitHub clone already includes the five math evaluation benchmarks—**AIME 2024, AMC23, Minerva Math, OlympiadBench, and MATH (2,000 problems)**—plus four generation-prompt sets in [`math_evaluation/data/`](math_evaluation/data/). No additional data download is needed to evaluate a local model.
+
+For training, download the seven Parquet trajectory files from the [Long-CoT-Distillation dataset on Hugging Face](https://huggingface.co/datasets/yuyongcan/Long-CoT-Distillation). From a fresh checkout, keep the dataset's `verl/data/` directory structure:
+
+```bash
+git clone https://github.com/yuyongcan/Long-CoT-Distillation.git
+cd Long-CoT-Distillation
+python -m pip install "huggingface_hub[cli]" pyarrow
+hf download yuyongcan/Long-CoT-Distillation --repo-type dataset --include 'verl/data/**' --local-dir .
+python verl/train_configs/verify_data.py
+```
+
+The verifier checks the seven downloaded training files and the nine evaluation/prompt files already tracked in Git against [`data_manifest.json`](verl/train_configs/data_manifest.json). If the dataset is private, sign in with `hf auth login` first. The training files remain excluded from Git commits by [`.gitignore`](.gitignore).
 
 ---
 
@@ -119,7 +133,7 @@ Evaluation uses AIME 2024, AMC23, Minerva Math, OlympiadBench, and MATH-2000, wi
 
 **Training requires the seven Parquet files** at the `verl/data/` paths specified by [`data_manifest.json`](verl/train_configs/data_manifest.json); they are not included in a GitHub clone. Use Python 3.10, a CUDA-compatible PyTorch installation, and the dependencies in `verl/requirements.txt`. The paper used 8 NVIDIA A100-80G GPUs; 32k-token runs require substantial host memory.
 
-After placing **all seven** training files under `verl/data/`, verify the 16 training and evaluation files, inspect the configurations, and launch an experiment:
+After completing [Data Preparation](#data-preparation), inspect the configurations and launch an experiment:
 
 ```bash
 python verl/train_configs/verify_data.py
@@ -158,7 +172,7 @@ Four additional prompt sets are included under [`math_evaluation/data/`](math_ev
 
 ### Training trajectories (separate release)
 
-The seven training Parquet files are **excluded from GitHub**. Their relative paths, row counts, and SHA-256 checksums are in [`verl/train_configs/data_manifest.json`](verl/train_configs/data_manifest.json); place them under `verl/data/` before training or running the full data verifier. The 22,222 correct trajectories are reused for the random-problem and medium-CoT baselines rather than duplicated. The incorrect set has 25,778 trajectories; the Easy-444 set contains 26,445 trajectories. A link to the separate training-data release can be added when it is available.
+The seven training Parquet files are **excluded from GitHub** and available from the [Long-CoT-Distillation dataset on Hugging Face](https://huggingface.co/datasets/yuyongcan/Long-CoT-Distillation); follow [Data Preparation](#data-preparation) to download them into `verl/data/`. Their relative paths, row counts, and SHA-256 checksums are in [`verl/train_configs/data_manifest.json`](verl/train_configs/data_manifest.json). The 22,222 correct trajectories are reused for the random-problem and medium-CoT baselines rather than duplicated. The incorrect set has 25,778 trajectories; the Easy-444 set contains 26,445 trajectories.
 
 ---
 
