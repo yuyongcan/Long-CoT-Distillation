@@ -1,6 +1,14 @@
 <h1 align="center">Facts Don’t Speak Louder than Words:<br>The Behavioral Essence of Long-CoT Distillation</h1>
 
-<p align="center"><i>NeurIPS 2026 · Code and representative experiments</i></p>
+<p align="center">
+  <i>NeurIPS 2026 · Code and representative experiments</i>
+</p>
+
+<p align="center">
+  <a href="https://arxiv.org/abs/2610.17607">📄 Paper (arXiv)</a> ·
+  <a href="https://github.com/yuyongcan/Long-CoT-Distillation">💻 Code</a> ·
+  <a href="https://huggingface.co/datasets/yuyongcan/Long-CoT-Distillation">🤗 Dataset</a>
+</p>
 
 <p align="center">
   <a href="#overview">Overview</a> ·
